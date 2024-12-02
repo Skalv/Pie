@@ -67,6 +67,14 @@ export default class ChihuahuaStrategy extends DefaultCosmosStrategy {
             ...decodedMsg
           }
         }
+      case "/liquidity.v1beta1.MsgCreatePool":
+        return {
+          type: "liquidity:createPool",
+          data: {
+            affectedAddresses: [decodedMsg.poolCreatorAddress],
+            ...decodedMsg
+          }
+        }
       default:
         this.logger.debug(`Unsupported type: ${typeUrl}`, decodedMsg)
         return null;

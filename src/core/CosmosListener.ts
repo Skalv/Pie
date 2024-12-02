@@ -119,7 +119,7 @@ export default class CosmosListener extends BlockchainListener {
       const block = message.result.data.value.block;
       const blockHeight = block.header.height;
       const timestamp = new Date(block.header.time).getTime();
-      this.logger.debug(`New block for ${this.config.chainId}. Nb TX: ${block.data.txs.length}`)
+      // this.logger.debug(`New block for ${this.config.chainId}. Nb TX: ${block.data.txs.length}`)
 
       if (block.data.txs) {
         block.data.txs.forEach((tx: any) => {
