@@ -10,10 +10,10 @@ export class PubsubService {
   private constructor() {
     this.logger = Logger.getInstance();
     this.publisher = createClient({
-      url: 'redis://:pwd123@127.0.0.1:6379'
+      url: process.env.REDIS_URL || 'redis://:pwd123@127.0.0.1:6379'
     });
     this.subscriber = createClient({
-      url: 'redis://:pwd123@127.0.0.1:6379'
+      url: process.env.REDIS_URL || 'redis://:pwd123@127.0.0.1:6379'
     });
 
     this.initialize();

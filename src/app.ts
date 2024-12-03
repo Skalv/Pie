@@ -11,7 +11,7 @@ const app: Express = express();
 const eventManager = EventManager.getInstance()
 const databaseService = DatabaseService.getInstance()
 const listenerOrchecstrator = new ListenerOrchestrator()
-const wsServer = new WebSocketServer(8080)
+const wsServer = new WebSocketServer(+process.env.PORT_SOCKET! || 8080)
 const logger = Logger.getInstance()
 
 const startApp = async ()=> {
