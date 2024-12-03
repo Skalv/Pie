@@ -18,4 +18,5 @@ FROM build AS production
 WORKDIR /home/node/app/dist
 
 EXPOSE 3000
+EXPOSE 8080
 CMD [ "dumb-init", "node", "server.js" ]
