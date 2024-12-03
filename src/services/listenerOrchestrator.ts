@@ -12,10 +12,15 @@ export default class ListenerOrchestrator {
   private listenerFactory: ListenerFactory;
   private pubsub: PubsubService
   private logger: Logger
+  private restartAttempts: Map<string, Date[]>;
+  private readonly MAX_RESTARTS = 5;
+  private readonly RESTART_WINDOW_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+
 
   constructor() {
     this.listeners = new Map()
     this.listenerStatuses = new Map()
+    this.restartAttempts = new Map()
     this.configService = new ConfigurationService()
     this.listenerFactory = new ListenerFactory()
     this.pubsub = PubsubService.getInstance()
@@ -101,8 +106,32 @@ export default class ListenerOrchestrator {
     }
   }
 
+  private canRestartListener(listenerId: string): boolean {
+    const attempts = this.restartAttempts.get(listenerId) || [];
+    const now = new Date();
+    
+    // Filter attempts within the last hour
+    const recentAttempts = attempts.filter(
+      timestamp => (now.getTime() - timestamp.getTime()) < this.RESTART_WINDOW_MS
+    );
+    
+    return recentAttempts.length < this.MAX_RESTARTS;
+  }
+
   private async restartListener(listenerId: string): Promise<void> {
     try {
+      if (!this.canRestartListener(listenerId)) {
+        const error = `Listener ${listenerId} exceeded restart limit (${this.MAX_RESTARTS} restarts per ${this.RESTART_WINDOW_MS/1000/60} minutes)`;
+        this.logger.error(error, new Error());
+        this.updateListenerStatus(listenerId, 'ERROR', error);
+        return;
+      }
+
+      // Track restart attempt
+      const attempts = this.restartAttempts.get(listenerId) || [];
+      attempts.push(new Date());
+      this.restartAttempts.set(listenerId, attempts);
+
       await this.stopListener(listenerId)
       await this.startListener(listenerId)
       this.logger.info(`Successfully restarted listener ${listenerId}`)
