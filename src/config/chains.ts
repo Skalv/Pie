@@ -12,10 +12,10 @@ export const Chains: ListenerConfig[] = [
   {
     id: "chihuahua",
     chainId: "cosmos:chihuahua-1",
-    // rpcEndpoint: "https://rpc.chihuahua.wtf",
-    // restEndpoint: "https://api.chihuahua.wtf",
-    rpcEndpoint: "http://127.0.0.1:26657",
-    restEndpoint: "http://127.0.0.1:433",
+    rpcEndpoint: "https://rpc.chihuahua.wtf",
+    restEndpoint: "https://api.chihuahua.wtf",
+    // rpcEndpoint: "http://127.0.0.1:26657",
+    // restEndpoint: "http://127.0.0.1:433",
     eventTypes: ["NewBlock"],
     enabled: true,
     strategyName: "ChihuahuaStrategy"
