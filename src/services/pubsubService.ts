@@ -9,9 +9,9 @@ export class PubsubService {
 
   private constructor() {
     this.logger = Logger.getInstance();
-    const redisUrl =
-      `redis://${process.env.REDIS_USER}:${process.env.REDIS_PWD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}` ||
-      "redis://:pwd123@127.0.0.1:6379";
+    const redisUrl = process.env.REDIS_HOST
+      ? `redis://${process.env.REDIS_USER}:${process.env.REDIS_PWD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`
+      : "redis://:pwd123@127.0.0.1:6379";
     this.publisher = createClient({
       url: redisUrl,
     });
