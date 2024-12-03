@@ -9,11 +9,14 @@ export class PubsubService {
 
   private constructor() {
     this.logger = Logger.getInstance();
+    const redisUrl =
+      `redis://${process.env.REDIS_USER}:${process.env.REDIS_PWD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}` ||
+      "redis://:pwd123@127.0.0.1:6379";
     this.publisher = createClient({
-      url: process.env.REDIS_URL || 'redis://:pwd123@127.0.0.1:6379'
+      url: redisUrl,
     });
     this.subscriber = createClient({
-      url: process.env.REDIS_URL || 'redis://:pwd123@127.0.0.1:6379'
+      url: redisUrl,
     });
 
     this.initialize();
@@ -39,11 +42,11 @@ export class PubsubService {
 
   async disconnect(): Promise<void> {
     try {
-      await this.publisher.disconnect()
-      await this.subscriber.disconnect()
-      this.logger.info("Redis connections closed")
+      await this.publisher.disconnect();
+      await this.subscriber.disconnect();
+      this.logger.info("Redis connections closed");
     } catch (error: any) {
-      this.logger.error("Redis disconnection error:", error)
+      this.logger.error("Redis disconnection error:", error);
     }
   }
 
@@ -58,16 +61,16 @@ export class PubsubService {
   async subscribe(channel: string, callback: (message: any) => void) {
     try {
       await this.subscriber.subscribe(channel, (message: string) => {
-        callback(JSON.parse(message))
+        callback(JSON.parse(message));
       });
     } catch (error: any) {
       this.logger.error("Redis subscribe error:", error);
     }
   }
-  
+
   private serializeMessage(obj: any): string {
-    return JSON.stringify(obj, (_, value) => 
-      typeof value === 'bigint' ? value.toString() : value
-    )
+    return JSON.stringify(obj, (_, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
   }
 }
