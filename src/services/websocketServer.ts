@@ -1,5 +1,4 @@
 import WebSocket from "ws";
-import { v4 as uuidv4 } from "uuid";
 import { BlockchainEvent } from "../types/listener";
 import { Subscription } from "../types/webSocket";
 import { Logger } from "../core/Logger";
@@ -15,14 +14,23 @@ export class WebSocketServer {
   constructor(port: number) {
     this.logger = Logger.getInstance().getComponentLogger('websocket')
     this.pubsub = PubsubService.getInstance();
-    this.wss = new WebSocket.Server({ port });
+    this.wss = new WebSocket.Server({ port, verifyClient: (info, callback) => {
+      try {
+        const urlParams = new URL('http://localhost' + info.req.url).searchParams;
+        (info.req as any).clientId = urlParams.get('clientId')
+        return callback(true)
+      } catch(err) {
+        this.logger.error(`Connection without clientId`, err)
+        return callback(false)
+      }
+    } });
     this.setupWebSocketServer();
     this.setupEventListener();
   }
 
   private setupWebSocketServer() {
-    this.wss.on("connection", (ws: WebSocket) => {
-      const uid = uuidv4();
+    this.wss.on("connection", (ws: WebSocket, request: any) => {
+      const uid = request.clientId
       this.connections.set(uid, ws);
       this.logger.debug(`New WS connection: ${uid}`, {uid})
 

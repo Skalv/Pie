@@ -7,11 +7,19 @@ import {
 } from "../types/webSocket";
 import { PubsubService } from "./pubsubService";
 
+interface BufferedClient {
+  disconnectedAt: Date;
+  subscriptions: SubscriptionEntry;
+  bufferedEvents: BlockchainEvent[];
+}
+
 export class EventManager {
   private static instance: EventManager;
   private readonly logger: Logger;
   private readonly pubsub: PubsubService;
   private subscriptions: SubscriptionMap = {};
+  private disconnectedClients: Map<string, BufferedClient> = new Map();
+  private readonly BUFFER_TIMEOUT_MS = 60 * 1000; // 1 minute
 
   private constructor() {
     this.logger = Logger.getInstance();
@@ -51,7 +59,7 @@ export class EventManager {
 
     const [category, subCategory] = event.eventType.split(":");
 
-    this.checkSubscriptionMatches(event, "all", "all")
+    this.checkSubscriptionMatches(event, "all", "all");
     this.checkSubscriptionMatches(event, category, "all");
 
     if (subCategory) {
@@ -60,6 +68,20 @@ export class EventManager {
   }
 
   private handleNewSubscription(uid: string, sub: Subscription) {
+    const bufferedClient = this.disconnectedClients.get(uid);
+    if (bufferedClient) {
+      const events = bufferedClient.bufferedEvents;
+      if (events.length > 0) {
+        this.logger.debug(
+          `Sending ${events.length} buffered events to reconnected client ${uid}`,
+        );
+        events.forEach((event) => {
+          this.pubsub.publish("event:match", { uid, event });
+        });
+      }
+      this.disconnectedClients.delete(uid);
+    }
+
     const [category, subCategory = "all"] = sub.eventType.split(":");
 
     if (!this.subscriptions[category]) {
@@ -86,21 +108,58 @@ export class EventManager {
   }
 
   private handleRemoveSubscription(uid: string) {
+    // Store the client's subscriptions before removing them
+    const clientSubscriptions: SubscriptionEntry = {
+      uid,
+      subscriptions: [],
+    };
+
     Object.keys(this.subscriptions).forEach((category) => {
       Object.keys(this.subscriptions[category]).forEach((subCategory) => {
-        this.subscriptions[category][subCategory].delete(uid);
-
-        if (this.subscriptions[category][subCategory].size === 0) {
-          delete this.subscriptions[category][subCategory];
+        const entry = this.subscriptions[category][subCategory].get(uid);
+        if (entry) {
+          clientSubscriptions.subscriptions.push(...entry.subscriptions);
         }
       });
-
-      if (Object.keys(this.subscriptions[category]).length === 0) {
-        delete this.subscriptions[category];
-      }
     });
 
-    this.logger.debug(`Removed all subscriptions for ${uid}`);
+    // Store disconnected client info if they had active subscriptions
+    if (clientSubscriptions.subscriptions.length > 0) {
+      this.disconnectedClients.set(uid, {
+        disconnectedAt: new Date(),
+        subscriptions: clientSubscriptions,
+        bufferedEvents: [],
+      });
+
+      // Schedule cleanup after buffer timeout
+      setTimeout(() => {
+        const client = this.disconnectedClients.get(uid);
+        if (client) {
+          this.disconnectedClients.delete(uid);
+          // Delete subscriptions
+          Object.keys(this.subscriptions).forEach((category) => {
+            Object.keys(this.subscriptions[category]).forEach((subCategory) => {
+              this.subscriptions[category][subCategory].delete(uid);
+              if (this.subscriptions[category][subCategory].size === 0) {
+                delete this.subscriptions[category][subCategory];
+              }
+            });
+
+            if (Object.keys(this.subscriptions[category]).length === 0) {
+              delete this.subscriptions[category];
+            }
+
+            this.logger.debug(
+              `Removing buffered subscriptions for ${uid} due to timeout`,
+            );
+          });
+        }
+      }, this.BUFFER_TIMEOUT_MS);
+    }
+
+    this.logger.debug(
+      `Buffered ${clientSubscriptions.subscriptions.length} subscriptions for ${uid}`,
+    );
   }
 
   private checkSubscriptionMatches(
@@ -116,7 +175,12 @@ export class EventManager {
       );
 
       if (matchingSubscriptions.length > 0) {
-        this.pubsub.publish("event:match", { uid: entry.uid, event });
+        const disconnectedClients = this.disconnectedClients.get(entry.uid);
+        if (disconnectedClients) {
+          disconnectedClients.bufferedEvents.push(event);
+        } else {
+          this.pubsub.publish("event:match", { uid: entry.uid, event });
+        }
       }
     }
   }
