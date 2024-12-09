@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Express, NextFunction, Request, Response } from "express";
 import ListenerOrchestrator from "./services/listenerOrchestrator";
 import { WebSocketServer } from "./services/websocketServer";
@@ -11,13 +12,13 @@ const app: Express = express();
 
 const metricsService = MetricsService.getInstance()
 const eventManager = EventManager.getInstance()
-const databaseService = DatabaseService.getInstance()
+/* const databaseService = DatabaseService.getInstance() */
 const listenerOrchecstrator = new ListenerOrchestrator()
 const wsServer = new WebSocketServer(+process.env.PORT_SOCKET! || 8080)
 const logger = Logger.getInstance()
 
 const startApp = async ()=> {
-  databaseService.start()
+  /* databaseService.start() */
   eventManager.start()
   await listenerOrchecstrator.start()
 
