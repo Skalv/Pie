@@ -5,9 +5,11 @@ import { Logger } from "./core/Logger";
 import { EventManager } from "./services/EventManager";
 import { Chains } from "./config/chains";
 import { DatabaseService } from "./services/DatabaseService";
+import { MetricsService } from "./services/MetricsService";
 
 const app: Express = express();
 
+const metricsService = MetricsService.getInstance()
 const eventManager = EventManager.getInstance()
 const databaseService = DatabaseService.getInstance()
 const listenerOrchecstrator = new ListenerOrchestrator()
@@ -32,6 +34,11 @@ app.use(express.json());
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello world");
 });
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', 'text/plain');
+  const metrics = await metricsService.metrics()
+  res.send(metrics)
+})
 
 // error Middleware
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {

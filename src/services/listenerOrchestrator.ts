@@ -4,6 +4,7 @@ import ListenerFactory from "../core/listenerFactory";
 import BlockchainListener from "../core/BlockchainListener";
 import { PubsubService } from "./pubsubService";
 import { Logger } from "../core/Logger";
+import { MetricsService } from "./MetricsService";
 
 export default class ListenerOrchestrator {
   private listeners: Map<string, BlockchainListener>;
@@ -15,6 +16,7 @@ export default class ListenerOrchestrator {
   private restartAttempts: Map<string, Date[]>;
   private readonly MAX_RESTARTS = 5;
   private readonly RESTART_WINDOW_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+  private metrics: MetricsService
 
 
   constructor() {
@@ -25,6 +27,7 @@ export default class ListenerOrchestrator {
     this.listenerFactory = new ListenerFactory()
     this.pubsub = PubsubService.getInstance()
     this.logger = Logger.getInstance()
+    this.metrics = MetricsService.getInstance()
   }
 
   async start() {
@@ -55,6 +58,8 @@ export default class ListenerOrchestrator {
       this.listeners.set(listenerId, listener)
       this.updateListenerStatus(listenerId, 'RUNNING')
 
+      this.metrics.updateActiveListener(this.listeners.size)
+
       this.logger.info(`${config.chainId} listener started`)
     } catch (error: any) {
       this.logger.error(`Cannot start ${config?.chainId || 'unconfigured'} listener.`, error)
@@ -69,6 +74,7 @@ export default class ListenerOrchestrator {
       await listener.stop()
       this.listeners.delete(listenerId)
       this.updateListenerStatus(listenerId, 'STOPPED')
+      this.metrics.updateActiveListener(this.listeners.size)
     }
   }
 

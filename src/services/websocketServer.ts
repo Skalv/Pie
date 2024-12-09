@@ -4,16 +4,20 @@ import { Subscription } from "../types/webSocket";
 import { Logger } from "../core/Logger";
 import { PubsubService } from "./pubsubService";
 import { CustomLogger } from "../types/log";
+import { MetricsService } from "./MetricsService";
 
 export class WebSocketServer {
   private readonly logger: CustomLogger
   private wss: WebSocket.Server;
   private connections: Map<string, WebSocket> = new Map();
   private pubsub: PubsubService;
+  private metrics: MetricsService
 
   constructor(port: number) {
+    this.metrics = MetricsService.getInstance()
     this.logger = Logger.getInstance().getComponentLogger('websocket')
     this.pubsub = PubsubService.getInstance();
+
     this.wss = new WebSocket.Server({ port, verifyClient: (info, callback) => {
       try {
         const urlParams = new URL('http://localhost' + info.req.url).searchParams;
@@ -24,6 +28,7 @@ export class WebSocketServer {
         return callback(false)
       }
     } });
+    
     this.setupWebSocketServer();
     this.setupEventListener();
   }
@@ -33,6 +38,9 @@ export class WebSocketServer {
       const uid = request.clientId
       this.connections.set(uid, ws);
       this.logger.debug(`New WS connection: ${uid}`, {uid})
+
+      this.metrics.updateActiveWSConnections(this.connections.size)
+      this.metrics.incWSConnections()
 
       ws.on("message", (message: string) => {
         try {
@@ -72,6 +80,8 @@ export class WebSocketServer {
   private handleClose(uid: string) {
     this.pubsub.publish("subscription:remove", uid);
     this.connections.delete(uid);
+
+    this.metrics.updateActiveWSConnections(this.connections.size)
   }
 
   private broadcastEvent(uid: string, event: BlockchainEvent) {
