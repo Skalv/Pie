@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { Express, NextFunction, Request, Response } from "express";
 import ListenerOrchestrator from "./services/listenerOrchestrator";
 import { WebSocketServer } from "./services/websocketServer";
@@ -10,17 +11,17 @@ import BlockchainListener from "./core/BlockchainListener";
 
 const app: Express = express();
 
-const metricsService = MetricsService.getInstance();
-const eventManager = EventManager.getInstance();
-const databaseService = DatabaseService.getInstance();
-const listenerOrchecstrator = new ListenerOrchestrator();
-const wsServer = new WebSocketServer(+process.env.PORT_SOCKET! || 8080);
-const logger = Logger.getInstance();
+const metricsService = MetricsService.getInstance()
+const eventManager = EventManager.getInstance()
+/* const databaseService = DatabaseService.getInstance() */
+const listenerOrchecstrator = new ListenerOrchestrator()
+const wsServer = new WebSocketServer(+process.env.PORT_SOCKET! || 8080)
+const logger = Logger.getInstance()
 
-const startApp = async () => {
-  databaseService.start();
-  eventManager.start();
-  await listenerOrchecstrator.start();
+const startApp = async ()=> {
+  /* databaseService.start() */
+  eventManager.start()
+  await listenerOrchecstrator.start()
 
   for (const listnerConf of Chains) {
     await listenerOrchecstrator.addListener(listnerConf);
