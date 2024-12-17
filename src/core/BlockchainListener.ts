@@ -11,4 +11,6 @@ export default abstract class BlockchainListener {
   abstract start(): Promise<void>;
   abstract stop(): Promise<void>;
   abstract checkhealth(): Promise<boolean>;
+
+  abstract callMethod(method: string, params: any): Promise<any>;
 }

@@ -7,14 +7,14 @@ export default class DefaultCosmosStrategy implements CosmosChainStrategy {
   protected readonly rpcEndpoint: string;
   protected readonly restEndpoint: string;
   protected registry: Registry;
-  protected logger: Logger
+  protected logger: Logger;
 
   constructor(rpcEndpoint: string, restEndpoint: string) {
     this.rpcEndpoint = rpcEndpoint;
     this.restEndpoint = restEndpoint;
 
     this.registry = new Registry(defaultRegistryTypes);
-    this.logger = Logger.getInstance()
+    this.logger = Logger.getInstance();
   }
 
   async fetchBalance(
@@ -23,9 +23,9 @@ export default class DefaultCosmosStrategy implements CosmosChainStrategy {
     const response = await fetch(
       `${this.restEndpoint}/cosmos/bank/v1beta1/balances/${address}`,
     );
-    const balances = await response.json();
+    const {balances} = await response.json();
 
-    return balances.data.balances;
+    return balances;
   }
 
   async fetchDelegation(address: string): Promise<any[]> {
@@ -48,10 +48,10 @@ export default class DefaultCosmosStrategy implements CosmosChainStrategy {
 
   parseTransaction(message: any): any {
     const decodedMsg = this.registry.decode(message);
-    return this.formatMessage(message.typeUrl, decodedMsg)
+    return this.formatMessage(message.typeUrl, decodedMsg);
   }
 
-  formatMessage(typeUrl:string, decodedMsg: any) {
+  formatMessage(typeUrl: string, decodedMsg: any) {
     switch (typeUrl) {
       case "/cosmos.bank.v1beta1.MsgSend":
         return {

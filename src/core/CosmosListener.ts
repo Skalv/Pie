@@ -13,8 +13,8 @@ export default class CosmosListener extends BlockchainListener {
   private websocket: WebSocket | null = null;
   private reconnectAttempts: number = 0;
   private readonly maxReconnectionAttemps: number = 5;
-  private logger: CustomLogger
-  private pubsub: PubsubService
+  private logger: CustomLogger;
+  private pubsub: PubsubService;
 
   constructor(config: ListenerConfig, strategy?: CosmosChainStrategy) {
     super(config);
@@ -23,8 +23,8 @@ export default class CosmosListener extends BlockchainListener {
       strategy ||
       new DefaultCosmosStrategy(config.rpcEndpoint, config.restEndpoint);
 
-    this.logger = Logger.getInstance().getChainLogger(config.chainId)
-    this.pubsub = PubsubService.getInstance()
+    this.logger = Logger.getInstance().getChainLogger(config.chainId);
+    this.pubsub = PubsubService.getInstance();
   }
 
   async start(): Promise<void> {
@@ -35,7 +35,7 @@ export default class CosmosListener extends BlockchainListener {
       this.isRunning = true;
       this.reconnectAttempts = 0;
     } catch (error: any) {
-      this.logger.error(error)
+      this.logger.error(error);
       throw error;
     }
   }
@@ -56,6 +56,16 @@ export default class CosmosListener extends BlockchainListener {
       return response.status === 200;
     } catch {
       return false;
+    }
+  }
+
+  async callMethod(method: string, params: any) {
+    switch (method) {
+      case "getBalance":
+        if (!params.address) {
+          throw new Error("Missing address param.");
+        }
+        return this.getBalance(params.address);
     }
   }
 
@@ -83,11 +93,11 @@ export default class CosmosListener extends BlockchainListener {
         const message = JSON.parse(data.toString());
         this.handleNewMessage(message);
       } catch (error: any) {
-        this.logger.error("Can't parse message", error)
+        this.logger.error("Can't parse message", error);
       }
     });
     this.websocket.on("error", (error) => {
-      this.pubsub.publish(`ERROR:${this.config.chainId}`, error)
+      this.pubsub.publish(`ERROR:${this.config.chainId}`, error);
     });
     /*
     this.websocket.on("close", () => {
@@ -126,7 +136,7 @@ export default class CosmosListener extends BlockchainListener {
           const decodedTx = decodeTxRaw(Buffer.from(tx, "base64"));
 
           for (const msg of decodedTx.body.messages) {
-            const eventData = this.strategy.parseTransaction(msg)
+            const eventData = this.strategy.parseTransaction(msg);
 
             if (eventData) {
               const blockchainEvent: BlockchainEvent = {
@@ -137,9 +147,9 @@ export default class CosmosListener extends BlockchainListener {
                 data: eventData.data,
               };
 
-              this.pubsub.publish('blockchainevent', blockchainEvent)
+              this.pubsub.publish("blockchainevent", blockchainEvent);
             } else {
-              this.logger.error(new Error(`Unknow TX type: ${msg.typeUrl}`))
+              this.logger.error(new Error(`Unknow TX type: ${msg.typeUrl}`));
             }
           }
         });
